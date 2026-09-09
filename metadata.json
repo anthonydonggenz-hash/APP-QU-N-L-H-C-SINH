@@ -1,0 +1,6 @@
+{
+  "name": "Quản Lý Lớp Học - Thầy Trần Đông - AI Trainer",
+  "description": "Ứng dụng quản lý lớp học thông minh và toàn diện dành cho giáo viên chủ nhiệm với trợ lý AI viết nhận xét học sinh, điểm danh, thi đua và học bạ.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
