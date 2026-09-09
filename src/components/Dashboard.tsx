@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { Student, ClassInfo, ClassEvent, ClassTask } from "../types.ts";
 import { EmulationWeeklyMonthlyStats } from "./EmulationWeeklyMonthlyStats.tsx";
+import { formatDateVi, formatFullDateVi, getCurrentWeekRange } from "../utils/dateUtils.ts";
 
 interface DashboardProps {
   students: Student[];
@@ -180,8 +181,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Welcome Banner - Styled in Blue Navy */}
       <div className="bg-gradient-to-r from-[#152238] via-[#1c2e4a] to-[#203354] rounded-[28px] p-6 md:p-8 shadow-lg border border-[#23395d]/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden text-white">
         <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#23395d]/80 text-blue-100 text-xs font-bold mb-3 border border-white/10 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Năm học {classInfo.year} • Giáo viên chủ nhiệm & AI Trainer
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30 shadow-xs">
+              <Clock className="w-3.5 h-3.5" /> Hôm nay: {formatFullDateVi()}
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#23395d]/80 text-blue-100 text-xs font-bold border border-white/10 shadow-xs">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" /> {getCurrentWeekRange().label} • Năm học {classInfo.year}
+            </div>
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight leading-snug">
             Chào {classInfo.teacherName}! Cùng chuẩn bị bài giảng và đồng hành cùng lớp {classInfo.className} nhé! 📚
@@ -198,6 +204,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <CalendarCheck className="w-4 h-4 text-[#1c2e4a]" /> Bắt đầu điểm danh
             </button>
             <button
+              id="dashboard-cta-daily-report-btn"
+              onClick={() => onNavigate("reports")}
+              className="bg-[#23395d]/80 hover:bg-[#23395d] text-white border border-white/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <BarChart3 className="w-4 h-4 text-emerald-300" /> Báo cáo ngày ({formatDateVi()})
+            </button>
+            <button
               id="dashboard-cta-ai-btn"
               onClick={() => onNavigate("ai_comment")}
               className="bg-[#23395d]/80 hover:bg-[#23395d] text-white border border-white/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
@@ -208,15 +221,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Visual Info Card */}
-        <div className="hidden lg:flex items-center justify-center w-52 h-40 bg-[#152238]/60 backdrop-blur-md rounded-2xl border border-white/15 p-4 text-center flex-col shadow-inner flex-shrink-0">
-          <div className="w-12 h-12 rounded-2xl bg-white text-[#1c2e4a] flex items-center justify-center shadow-md mb-2">
+        <div className="hidden lg:flex items-center justify-center w-56 h-44 bg-[#152238]/70 backdrop-blur-md rounded-2xl border border-white/15 p-4 text-center flex-col shadow-inner flex-shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-white text-[#1c2e4a] flex items-center justify-center shadow-md mb-2">
             <Award className="w-6 h-6 text-[#1c2e4a]" />
           </div>
           <p className="text-sm font-bold text-white">Lớp {classInfo.className}</p>
-          <p className="text-xs text-sky-200 font-semibold mt-0.5">
-            Chuyên cần: {stats.presentRate}%
+          <p className="text-xs text-emerald-300 font-bold mt-1">
+            Chuyên cần: {stats.presentRate}% ({stats.present}/{stats.total})
           </p>
-          <p className="text-[11px] text-blue-200/60 mt-0.5 truncate max-w-[180px]">
+          <p className="text-[11px] text-sky-200/80 mt-0.5 font-medium">
+            Ngày {formatDateVi()}
+          </p>
+          <p className="text-[10px] text-blue-200/60 mt-0.5 truncate max-w-[180px]">
             {classInfo.school}
           </p>
         </div>

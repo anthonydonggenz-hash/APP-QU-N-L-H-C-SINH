@@ -239,6 +239,7 @@ export default function App() {
             <AttendanceManager
               students={students}
               setStudents={setStudents}
+              classInfo={classInfo}
               onNavigateToParent={(id) => handleNavigate("parents", { studentId: id })}
               showToast={showToast}
             />

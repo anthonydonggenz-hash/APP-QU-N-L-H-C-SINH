@@ -26,11 +26,26 @@ import {
   ArrowRight,
   Medal,
   CheckCircle2,
+  Clock,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Student } from "../types.ts";
+import {
+  formatDateVi,
+  formatFullDateVi,
+  formatDayOfWeekVi,
+  getCurrentWeekRange,
+  getLastWeekRange,
+  getMonthInfo,
+} from "../utils/dateUtils.ts";
 
-export type PeriodType = "week_current" | "week_last" | "month_current" | "month_last" | "semester";
+export type PeriodType =
+  | "day_current"
+  | "week_current"
+  | "week_last"
+  | "month_current"
+  | "month_last"
+  | "semester";
 
 interface EmulationWeeklyMonthlyStatsProps {
   students: Student[];
@@ -43,8 +58,8 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
   onNavigate,
   showToast,
 }) => {
-  // Period filter: week_current, week_last, month_current, month_last, semester
-  const [period, setPeriod] = useState<PeriodType>("week_current");
+  // Period filter defaults to "day_current" (Hôm nay theo ngày thực tế hiện tại)
+  const [period, setPeriod] = useState<PeriodType>("day_current");
   // Chart visual mode: "top_students" | "group_compare" | "distribution"
   const [chartMode, setChartMode] = useState<"top_students" | "group_compare" | "distribution">("top_students");
   // Search & table filters
@@ -54,44 +69,62 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
   const [sortBy, setSortBy] = useState<"stars" | "academic" | "name">("stars");
   const [viewMode, setViewMode] = useState<"both" | "chart_only" | "table_only">("both");
 
-  // Multiplier or baseline shifts depending on period to realistically reflect weekly/monthly emulation
+  // Dynamic real-time date data
+  const now = useMemo(() => new Date(), []);
+  const todayFormatted = useMemo(() => formatDateVi(now), [now]);
+  const todayFull = useMemo(() => formatFullDateVi(now), [now]);
+  const currentWeek = useMemo(() => getCurrentWeekRange(now), [now]);
+  const lastWeek = useMemo(() => getLastWeekRange(now), [now]);
+  const currentMonth = useMemo(() => getMonthInfo(now, 0), [now]);
+  const lastMonth = useMemo(() => getMonthInfo(now, -1), [now]);
+
+  // Multiplier or baseline shifts depending on period to realistically reflect daily/weekly/monthly emulation
   const periodConfig = useMemo(() => {
     switch (period) {
+      case "day_current":
+        return {
+          title: `Hôm nay (${todayFull})`,
+          subtitle: `Báo cáo tình hình thi đua & kết quả học tập trong ngày thực tế ${todayFormatted}`,
+          badge: `Ngày ${todayFormatted}`,
+          multiplier: 0.25,
+          starsPerWeek: 0.25,
+          desc: "Báo cáo ngày thực tế hiện tại",
+        };
       case "week_current":
         return {
-          title: "Tuần này (Tuần 24)",
-          subtitle: "Từ 04/03/2026 đến 09/03/2026",
-          badge: "Tuần 24",
+          title: `Tuần này (${currentWeek.label})`,
+          subtitle: `${currentWeek.rangeText} (Năm học 2026-2027)`,
+          badge: currentWeek.label,
           multiplier: 1,
           starsPerWeek: 1,
           desc: "Đang diễn ra",
         };
       case "week_last":
         return {
-          title: "Tuần trước (Tuần 23)",
-          subtitle: "Từ 25/02/2026 đến 02/03/2026",
-          badge: "Tuần 23",
+          title: `Tuần trước (${lastWeek.label})`,
+          subtitle: `${lastWeek.rangeText} (Năm học 2026-2027)`,
+          badge: lastWeek.label,
           multiplier: 0.92,
           starsPerWeek: 0.9,
           desc: "Đã hoàn thành",
         };
       case "month_current":
         return {
-          title: "Tháng này (Tháng 3)",
-          subtitle: "Tháng 03/2026 (Năm học 2026-2027)",
-          badge: "Tháng 03",
+          title: `Tháng này (${currentMonth.title})`,
+          subtitle: currentMonth.subtitle,
+          badge: currentMonth.label,
           multiplier: 1.8,
           starsPerWeek: 3.8,
           desc: "Tháng cao điểm thi đua",
         };
       case "month_last":
         return {
-          title: "Tháng trước (Tháng 2)",
-          subtitle: "Tháng 02/2026 (Năm học 2026-2027)",
-          badge: "Tháng 02",
+          title: `Tháng trước (${lastMonth.title})`,
+          subtitle: lastMonth.subtitle,
+          badge: lastMonth.label,
           multiplier: 1.65,
           starsPerWeek: 3.5,
-          desc: "Tổng kết tháng 2",
+          desc: "Tổng kết tháng trước",
         };
       case "semester":
         return {
@@ -103,7 +136,7 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
           desc: "Toàn diện học kỳ",
         };
     }
-  }, [period]);
+  }, [period, todayFull, todayFormatted, currentWeek, lastWeek, currentMonth, lastMonth]);
 
   // Compute calculated student scores according to selected period
   const processedStudents = useMemo(() => {
@@ -115,7 +148,11 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
 
       // Calculate period-specific emulation stars
       let periodStars = baseStars;
-      if (period === "week_current") {
+      if (period === "day_current") {
+        // Daily stars: 1 to 4 stars depending on attendance and base performance
+        const attendanceBonus = s.attendance === "Có mặt" ? 1 : 0;
+        periodStars = Math.max(1, Math.round(baseStars * 0.15) + attendanceBonus);
+      } else if (period === "week_current") {
         periodStars = Math.max(2, Math.round(baseStars * 0.45));
       } else if (period === "week_last") {
         periodStars = Math.max(2, Math.round(baseStars * 0.42));
@@ -129,14 +166,30 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
 
       // Rank category based on stars and academic performance
       let rankCategory: "Xuất sắc" | "Tốt" | "Đạt" | "Cần cố gắng" = "Tốt";
-      if (periodStars >= (period === "semester" ? 35 : period === "month_current" || period === "month_last" ? 16 : 7) && academicAvg >= 9.0) {
-        rankCategory = "Xuất sắc";
-      } else if (periodStars >= (period === "semester" ? 25 : period === "month_current" || period === "month_last" ? 12 : 5) && academicAvg >= 7.5) {
-        rankCategory = "Tốt";
-      } else if (periodStars >= (period === "semester" ? 15 : period === "month_current" || period === "month_last" ? 8 : 3)) {
-        rankCategory = "Đạt";
+      if (period === "day_current") {
+        if (periodStars >= 3 && academicAvg >= 8.5 && s.attendance === "Có mặt") {
+          rankCategory = "Xuất sắc";
+        } else if (periodStars >= 2 && academicAvg >= 7.0 && s.attendance !== "Vắng không phép") {
+          rankCategory = "Tốt";
+        } else if (periodStars >= 1) {
+          rankCategory = "Đạt";
+        } else {
+          rankCategory = "Cần cố gắng";
+        }
       } else {
-        rankCategory = "Cần cố gắng";
+        const thresholdEx = period === "semester" ? 35 : period === "month_current" || period === "month_last" ? 16 : 7;
+        const thresholdGood = period === "semester" ? 25 : period === "month_current" || period === "month_last" ? 12 : 5;
+        const thresholdPass = period === "semester" ? 15 : period === "month_current" || period === "month_last" ? 8 : 3;
+
+        if (periodStars >= thresholdEx && academicAvg >= 9.0) {
+          rankCategory = "Xuất sắc";
+        } else if (periodStars >= thresholdGood && academicAvg >= 7.5) {
+          rankCategory = "Tốt";
+        } else if (periodStars >= thresholdPass) {
+          rankCategory = "Đạt";
+        } else {
+          rankCategory = "Cần cố gắng";
+        }
       }
 
       return {
@@ -427,6 +480,16 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
         {/* Time Period Filter Switches */}
         <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
           <button
+            onClick={() => setPeriod("day_current")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              period === "day_current"
+                ? "bg-[#1c2e4a] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-300" /> Hôm nay ({todayFormatted.slice(0, 5)})
+          </button>
+          <button
             onClick={() => setPeriod("week_current")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
               period === "week_current"
@@ -434,7 +497,7 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" /> Tuần này
+            <Calendar className="w-3.5 h-3.5" /> Tuần này ({currentWeek.label})
           </button>
           <button
             onClick={() => setPeriod("week_last")}
@@ -454,7 +517,7 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Tháng này
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" /> {currentMonth.label}
           </button>
           <button
             onClick={() => setPeriod("month_last")}
@@ -464,7 +527,7 @@ export const EmulationWeeklyMonthlyStats: React.FC<EmulationWeeklyMonthlyStatsPr
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Tháng trước
+            {lastMonth.label}
           </button>
           <button
             onClick={() => setPeriod("semester")}

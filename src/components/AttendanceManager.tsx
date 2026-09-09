@@ -15,11 +15,13 @@ import {
   Copy,
 } from "lucide-react";
 import * as XLSX from "xlsx";
-import { Student } from "../types.ts";
+import { Student, ClassInfo } from "../types.ts";
+import { getCurrentDateISO, formatDateVi, formatFullDateVi } from "../utils/dateUtils.ts";
 
 interface AttendanceManagerProps {
   students: Student[];
   setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  classInfo?: ClassInfo;
   onNavigateToParent?: (studentId: number) => void;
   showToast: (msg: string, type?: "success" | "error" | "warning" | "info") => void;
 }
@@ -27,12 +29,11 @@ interface AttendanceManagerProps {
 export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   students,
   setStudents,
+  classInfo,
   onNavigateToParent,
   showToast,
 }) => {
-  const [selectedDate, setSelectedDate] = useState(() => {
-    return new Date().toISOString().split("T")[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(() => getCurrentDateISO());
   const [showReportModal, setShowReportModal] = useState(false);
 
   // Local state map for attendance statuses and notes
@@ -172,16 +173,30 @@ export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Date Picker */}
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <input
-              id="attendance-date-picker"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="text-xs font-semibold text-slate-700 outline-none cursor-pointer"
-            />
+          {/* Date Picker & Quick Today Button */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs">
+              <Calendar className="w-4 h-4 text-[#1c2e4a]" />
+              <input
+                id="attendance-date-picker"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+              />
+            </div>
+            <button
+              id="btn-attendance-today"
+              onClick={() => setSelectedDate(getCurrentDateISO())}
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                selectedDate === getCurrentDateISO()
+                  ? "bg-[#1c2e4a] text-white border-[#1c2e4a] shadow-xs"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              }`}
+              title="Đặt ngày báo cáo về hôm nay"
+            >
+              Hôm nay ({formatDateVi().slice(0, 5)})
+            </button>
           </div>
 
           <button
@@ -395,9 +410,9 @@ export const AttendanceManager: React.FC<AttendanceManagerProps> = ({
               </p>
 
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap select-all">
-{`📢 BÁO CÁO ĐIỂM DANH LỚP 1A
-📅 Ngày: ${selectedDate}
-👨‍🏫 GVCN: Thầy Trần Đông - AI Trainer
+{`📢 BÁO CÁO ĐIỂM DANH LỚP ${classInfo?.className || "3A1"}
+📅 Ngày: ${formatFullDateVi(selectedDate)}
+👨‍🏫 GVCN: ${classInfo?.teacherName || "Thầy Trần Đông - AI Trainer"}
 ────────────────────
 👥 Sĩ số: ${summary.total} học sinh
 ✅ Có mặt: ${summary.present} (${summary.rate}%)
@@ -429,7 +444,7 @@ ${
                 </button>
                 <button
                   onClick={() => {
-                    const text = `📢 BÁO CÁO ĐIỂM DANH LỚP 1A\n📅 Ngày: ${selectedDate}\n👨‍🏫 GVCN: Thầy Trần Đông - AI Trainer\n────────────────────\n👥 Sĩ số: ${summary.total} học sinh\n✅ Có mặt: ${summary.present} (${summary.rate}%)\n⚠️ Vắng có phép: ${summary.absentExcused}\n❌ Vắng không phép: ${summary.absentUnexcused}\n⏰ Đi muộn: ${summary.late}\n${
+                    const text = `📢 BÁO CÁO ĐIỂM DANH LỚP ${classInfo?.className || "3A1"}\n📅 Ngày: ${formatFullDateVi(selectedDate)}\n👨‍🏫 GVCN: ${classInfo?.teacherName || "Thầy Trần Đông - AI Trainer"}\n────────────────────\n👥 Sĩ số: ${summary.total} học sinh\n✅ Có mặt: ${summary.present} (${summary.rate}%)\n⚠️ Vắng có phép: ${summary.absentExcused}\n❌ Vắng không phép: ${summary.absentUnexcused}\n⏰ Đi muộn: ${summary.late}\n${
                       students.filter((s) => (attendanceMap[s.id]?.status || s.attendance) !== "Có mặt").length > 0
                         ? "\n📋 Danh sách vắng/đi muộn:\n" +
                           students
