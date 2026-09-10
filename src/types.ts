@@ -56,3 +56,12 @@ export interface BehaviorRecord {
   reason: string;
   time: string;
 }
+
+export interface DailyRecordEntry {
+  attendance: "Có mặt" | "Vắng phép" | "Vắng không phép" | "Đi muộn";
+  status: "Tốt" | "Tiến bộ" | "Bình thường" | "Cần quan tâm";
+  stars: number;
+  note: string;
+}
+
+export type DailyHistoryMap = Record<string, Record<number, DailyRecordEntry>>;

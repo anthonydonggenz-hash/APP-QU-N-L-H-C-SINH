@@ -294,6 +294,7 @@ export default function App() {
           {activeTab === "reports" && (
             <ReportsManager
               students={students}
+              setStudents={setStudents}
               classInfo={classInfo}
               showToast={showToast}
             />

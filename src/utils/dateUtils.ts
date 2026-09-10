@@ -15,7 +15,32 @@ export function getCurrentDateISO(): string {
   return `${year}-${month}-${day}`;
 }
 
-export function formatDayOfWeekVi(date: Date = new Date()): string {
+export function parseDateSafe(date: Date | string): Date {
+  if (date instanceof Date) return date;
+  if (typeof date === "string") {
+    // If format is YYYY-MM-DD
+    const isoMatch = date.split("T")[0].match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (isoMatch) {
+      const year = parseInt(isoMatch[1], 10);
+      const month = parseInt(isoMatch[2], 10) - 1;
+      const day = parseInt(isoMatch[3], 10);
+      return new Date(year, month, day);
+    }
+    // If format is DD/MM/YYYY
+    const viMatch = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (viMatch) {
+      const day = parseInt(viMatch[1], 10);
+      const month = parseInt(viMatch[2], 10) - 1;
+      const year = parseInt(viMatch[3], 10);
+      return new Date(year, month, day);
+    }
+    return new Date(date);
+  }
+  return new Date();
+}
+
+export function formatDayOfWeekVi(date: Date | string = new Date()): string {
+  const d = parseDateSafe(date);
   const days = [
     "Chủ Nhật",
     "Thứ Hai",
@@ -25,11 +50,20 @@ export function formatDayOfWeekVi(date: Date = new Date()): string {
     "Thứ Sáu",
     "Thứ Bảy",
   ];
-  return days[date.getDay()];
+  return days[d.getDay()];
 }
 
 export function formatDateVi(date: Date | string = new Date()): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  if (typeof date === "string") {
+    const isoMatch = date.split("T")[0].match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (isoMatch) {
+      const day = isoMatch[3].padStart(2, "0");
+      const month = isoMatch[2].padStart(2, "0");
+      const year = isoMatch[1];
+      return `${day}/${month}/${year}`;
+    }
+  }
+  const d = parseDateSafe(date);
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const year = d.getFullYear();
@@ -37,7 +71,7 @@ export function formatDateVi(date: Date | string = new Date()): string {
 }
 
 export function formatFullDateVi(date: Date | string = new Date()): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseDateSafe(date);
   const dayOfWeek = formatDayOfWeekVi(d);
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -46,7 +80,7 @@ export function formatFullDateVi(date: Date | string = new Date()): string {
 }
 
 export function formatFormalDateVi(date: Date | string = new Date()): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseDateSafe(date);
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const year = d.getFullYear();
@@ -131,4 +165,38 @@ export function getMonthInfo(date: Date = new Date(), monthOffset = 0): {
     title: `Tháng ${monthPadded}/${year}`,
     subtitle: `Tháng ${monthPadded}/${year} (Năm học ${year}-${year + 1})`,
   };
+}
+
+/**
+ * Steps a dateISO string (YYYY-MM-DD) by delta days.
+ */
+export function stepDateISO(dateISO: string, deltaDays: number): string {
+  try {
+    const parts = dateISO.split("-");
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    d.setDate(d.getDate() + deltaDays);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  } catch {
+    return dateISO;
+  }
+}
+
+/**
+ * Returns the list of months in the 2026-2027 school year.
+ */
+export function getSchoolYearMonths(): Array<{ key: string; month: number; year: number; label: string }> {
+  return [
+    { key: "2026-09", month: 9, year: 2026, label: "Tháng 09/2026" },
+    { key: "2026-10", month: 10, year: 2026, label: "Tháng 10/2026" },
+    { key: "2026-11", month: 11, year: 2026, label: "Tháng 11/2026" },
+    { key: "2026-12", month: 12, year: 2026, label: "Tháng 12/2026" },
+    { key: "2027-01", month: 1, year: 2027, label: "Tháng 01/2027" },
+    { key: "2027-02", month: 2, year: 2027, label: "Tháng 02/2027" },
+    { key: "2027-03", month: 3, year: 2027, label: "Tháng 03/2027" },
+    { key: "2027-04", month: 4, year: 2027, label: "Tháng 04/2027" },
+    { key: "2027-05", month: 5, year: 2027, label: "Tháng 05/2027" },
+  ];
 }
